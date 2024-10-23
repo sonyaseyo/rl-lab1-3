@@ -13,41 +13,69 @@ num_actions = env.action_space.n
 value_table = np.zeros(num_states)
 
 # рівноймовірна стратегія
-policy = np.ones([num_states, num_actions]) / num_actions
-
-def policy_evaluation(policy, env, gamma, episodes=1000):
-    value_table = np.zeros(num_states)
-    for _ in range(episodes):
-        state = env.reset()[0]
-        done = False
-        while not done:
-            action = np.random.choice(num_actions, p=policy[state])
-            next_state, reward, done, truncated, _ = env.step(action)
-            G = reward + gamma * value_table[next_state]
-            value_table[state] += G
-            state = next_state
-    return value_table / episodes
+eq_policy = np.ones(num_states * num_actions) / num_actions
 
 
-v_pi = policy_evaluation(policy, env, gamma)
+def random_action(state):
+    return np.random.choice(num_actions)
+
+def policy_evaluation(policy, env, gamma, num_episodes=1000):
+    # value_table = np.zeros(num_states)
+    # for i in range(episodes):
+    #     state = env.reset()[0]
+    #     done = False
+    #     while not done:
+    #         action = np.random.choice(num_actions, p=policy[state])
+    #         next_state, reward, done, truncated, info = env.step(action)
+    #         G = reward + gamma * value_table[next_state]
+    #         value_table[state] += G
+    #         state = next_state
+    # return value_table / episodes
+    value_table_ = np.zeros(num_states)
+    returns = {state_: [] for state_ in range(num_states)}
+
+    for _ in range(num_episodes):
+        state_ = env.reset()[0]
+        episode_ = []
+        # Generate an episode
+        while True:
+            action_ = random_action(state_)
+            next_state, reward, done, truncated, info = env.step(action_)
+            episode_.append((state_, reward))
+            if done:
+                break
+            state_ = next_state
+
+        # Calculate the return and update the value table
+        G = 0
+        for state_, reward in reversed(episode_):
+            G = gamma * G + reward
+            returns[state_].append(G)
+            value_table_[state_] = np.mean(returns[state_])
+
+    return value_table_
+
+
+v_pi = policy_evaluation(eq_policy, env, gamma)
 
 print("ф-ція ціни стану для рівноймовірної стратегії:")
 print(v_pi.reshape(4, 4))
 
 def compute_action_value_function(policy, env, gamma, episodes=1000):
     action_value_table = np.zeros((num_states, num_actions))
-    for _ in range(episodes):
-        state = env.reset()[0]
+    for i in range(episodes):
+        state_ = env.reset()[0]
         done = False
         while not done:
-            action = np.random.choice(num_actions, p=policy[state])
-            next_state, reward, done, truncated, _ = env.step(action)
+            action_ = random_action(state_)
+            next_state, reward, done, truncated, info = env.step(action_)
             G = reward + gamma * np.max(action_value_table[next_state])
-            action_value_table[state, action] += G
-            state = next_state
+            action_value_table[state_][action_] += G
+            state_ = next_state
     return action_value_table / episodes
 
-q_pi = compute_action_value_function(policy, env, gamma)
+
+q_pi = compute_action_value_function(eq_policy, env, gamma)
 
 print("ф-ція ціни дії-стану для рівноймовірної стратегії:")
 print(q_pi)
