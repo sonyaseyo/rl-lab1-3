@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 env = gym.make("FrozenLake-v1", is_slippery=False, render_mode='ansi')
 
-transitions = env.unwrapped.P
+#transitions = env.unwrapped.P
 
 gamma = 0.75
 num_states = env.observation_space.n
@@ -15,23 +15,21 @@ value_table = np.zeros(num_states)
 # рівноймовірна стратегія
 policy = np.ones([num_states, num_actions]) / num_actions
 
-def policy_evaluation(policy, transitions, gamma, theta=1e-10, max_iterations=1000):
+def policy_evaluation(policy, env, gamma, episodes=1000):
     value_table = np.zeros(num_states)
-    for i in range(max_iterations):
-        delta = 0
-        for state in range(num_states):
-            v = 0
-            for action, action_prob in enumerate(policy[state]):
-                for prob, next_state, reward, done in transitions[state][action]:
-                    v += action_prob * prob * (reward + gamma * value_table[next_state])
-            delta = max(delta, np.abs(v - value_table[state]))
-            value_table[state] = v
-        if delta < theta:
-            break
-    return value_table
+    for _ in range(episodes):
+        state = env.reset()[0]
+        done = False
+        while not done:
+            action = np.random.choice(num_actions, p=policy[state])
+            next_state, reward, done, truncated, _ = env.step(action)
+            G = reward + gamma * value_table[next_state]
+            value_table[state] += G
+            state = next_state
+    return value_table / episodes
 
 
-v_pi = policy_evaluation(policy, transitions, gamma)
+v_pi = policy_evaluation(policy, env, gamma)
 
 print("ф-ція ціни стану для рівноймовірної стратегії:")
 print(v_pi.reshape(4, 4))
@@ -251,23 +249,23 @@ print("стратегія π2 на основі q* (Expected SARSA):")
 print(policy_pi2)
 
 
-# Проведемо 100 епізодів зі стратегією π2
+# 100 епізодів зі стратегією π2
 rewards_pi2, lengths_pi2 = run_episodes(env, num_episodes=100)
 
-# Виведемо графіки для стратегії π2
+
 plt.figure(figsize=(12, 5))
 plt.subplot(1, 2, 1)
 plt.plot(rewards_pi2)
-plt.title("Сумарна винагорода (стратегія π2)")
+plt.title("сумарна винагорода (стратегія π2)")
 plt.subplot(1, 2, 2)
 plt.plot(lengths_pi2)
-plt.title("Тривалість епізодів (стратегія π2)")
+plt.title("тривалість епізодів (стратегія π2)")
 plt.show()
 
-# Порівняння результатів
-print(f"Середня винагорода (стратегія π2): {np.mean(rewards_pi2)}")
-print(f"Середня винагорода (оптимальна стратегія): {np.mean(rewards_opt)}")
-print(f"Середня винагорода (рівноймовірна стратегія): {np.mean(rewards)}")
+
+print(f"середня винагорода (стратегія π2): {np.mean(rewards_pi2)}")
+print(f"середня винагорода (оптимальна стратегія): {np.mean(rewards_opt)}")
+print(f"середня винагорода (рівноймовірна стратегія): {np.mean(rewards)}")
 
 
 
